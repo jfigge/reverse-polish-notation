@@ -17,23 +17,24 @@ var (
 var ( // https://www.tutorialspoint.com/go/go_operators_precedence.htm
 	opMap     = map[byte][]*Operator{}
 	operators = [...]Operator{
-		{precedence: 11, symbol: '-', operands: 2, solver: subtract, qualifiers: OpTypeOperand | OpTypeParentheses},
-		{precedence: 12, symbol: '+', operands: 2, solver: add, qualifiers: OpTypeOperand | OpTypeParentheses},
-		{precedence: 21, symbol: '*', operands: 2, solver: multiply},
-		{precedence: 22, symbol: '%', operands: 2, solver: mod},
-		{precedence: 23, symbol: '/', operands: 2, solver: divide},
-		{precedence: 31, symbol: '+', operands: 1, qualifiers: OpTypeEmpty | OpTypeOperator},
-		{precedence: 32, symbol: '-', operands: 1, solver: negative, qualifiers: OpTypeEmpty | OpTypeOperator},
+		{tokenType: TokenOperator, precedence: 11, symbol: '-', operands: 2, solver: subtract, qualifiers: TokenOperand | TokenParentheses},
+		{tokenType: TokenOperator, precedence: 12, symbol: '+', operands: 2, solver: add, qualifiers: TokenOperand | TokenParentheses},
+		{tokenType: TokenOperator, precedence: 21, symbol: '*', operands: 2, solver: multiply},
+		{tokenType: TokenOperator, precedence: 22, symbol: '%', operands: 2, solver: mod},
+		{tokenType: TokenOperator, precedence: 23, symbol: '/', operands: 2, solver: divide},
+		{tokenType: TokenOperator, precedence: 31, symbol: '+', operands: 1, qualifiers: TokenEmpty | TokenOperator},
+		{tokenType: TokenOperator, precedence: 32, symbol: '-', operands: 1, solver: negative, qualifiers: TokenEmpty | TokenOperator},
 	}
 	opRegEx string
 )
 
 type Operator struct {
+	tokenType  TokenType
 	precedence uint8
 	symbol     byte
 	operands   uint8
 	solver     func([]*Operand) (*Operand, error)
-	qualifiers OpType
+	qualifiers TokenType
 }
 
 func init() {
@@ -54,7 +55,7 @@ func init() {
 	opRegEx = strings.Join(parts, "|")
 }
 
-func OperatorFromSymbol(symbol byte, topOpType OpType) (*Operator, bool) {
+func OperatorFromToken(symbol byte, lastToken TokenType) (*Operator, bool) {
 	ops, ok := opMap[symbol]
 	if !ok {
 		return nil, false
@@ -62,7 +63,7 @@ func OperatorFromSymbol(symbol byte, topOpType OpType) (*Operator, bool) {
 		return ops[0], true
 	}
 	for _, op := range ops {
-		if op.qualifiers&topOpType == topOpType {
+		if op.qualifiers&lastToken == lastToken {
 			return op, true
 		}
 	}
@@ -81,8 +82,8 @@ func (o *Operator) Precedence() uint8 {
 	return o.precedence
 }
 
-func (o *Operator) Symbol() byte {
-	return o.symbol
+func (o *Operator) String() string {
+	return string(o.symbol)
 }
 
 func (o *Operator) Exclude() bool {
@@ -91,6 +92,10 @@ func (o *Operator) Exclude() bool {
 
 func (o *Operator) Solve(args []*Operand) (*Operand, error) {
 	return o.solver(args)
+}
+
+func (o *Operator) Type() TokenType {
+	return o.tokenType
 }
 
 // ****** Operations **********************************************************

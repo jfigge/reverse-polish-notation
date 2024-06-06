@@ -11,14 +11,15 @@ import (
 var (
 	parenthesisMap = map[byte]Parenthesis{}
 	parentheses    = [...]Parenthesis{
-		{symbol: '('},
-		{symbol: ')'},
+		{tokenType: TokenParentheses, symbol: '('},
+		{tokenType: TokenParentheses, symbol: ')'},
 	}
 	parenthesisRegEx string
 )
 
 type Parenthesis struct {
-	symbol byte
+	tokenType TokenType
+	symbol    byte
 }
 
 func init() {
@@ -30,7 +31,7 @@ func init() {
 	parenthesisRegEx = strings.Join(parts, "|")
 }
 
-func ParenthesisFromSymbol(symbol byte) (*Parenthesis, bool) {
+func ParenthesisFromToken(symbol byte) (*Parenthesis, bool) {
 	parenthesis, ok := parenthesisMap[symbol]
 	return &parenthesis, ok
 }
@@ -39,10 +40,14 @@ func ParenthesisRegEx() string {
 	return parenthesisRegEx
 }
 
-func (p *Parenthesis) Symbol() byte {
-	return p.symbol
+func (p *Parenthesis) String() string {
+	return string(p.symbol)
 }
 
 func (p *Parenthesis) IsStart() bool {
 	return p.symbol == '('
+}
+
+func (o *Parenthesis) Type() TokenType {
+	return o.tokenType
 }

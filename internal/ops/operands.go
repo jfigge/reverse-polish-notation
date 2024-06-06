@@ -15,8 +15,9 @@ var (
 )
 
 type Operand struct {
-	i64 int64
-	f64 float64
+	tokenType TokenType
+	i64       int64
+	f64       float64
 }
 
 func (o *Operand) IsFloat() bool {
@@ -34,9 +35,13 @@ func (o *Operand) Value() any {
 	return o.i64
 }
 
+func (o *Operand) Type() TokenType {
+	return o.tokenType
+}
+
 func OperandFromToken(token string) (*Operand, error) {
 	var err error
-	op := &Operand{}
+	op := &Operand{tokenType: TokenOperand}
 	if strings.Contains(token, ".") && !strings.HasSuffix(token, ".") {
 		op.f64, err = strconv.ParseFloat(token, 64)
 	} else {
