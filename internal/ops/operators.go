@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	ErrInvalidOperandCount = fmt.Errorf("invalid number of operands")
-	ErrOperandTypeMismatch = fmt.Errorf("operand type mistmatch")
+	ErrInvalidOperation = fmt.Errorf("invalid operation")
 )
 
 var ( // https://www.tutorialspoint.com/go/go_operators_precedence.htm
@@ -33,7 +32,7 @@ type Operator struct {
 	precedence uint8
 	symbol     byte
 	operands   uint8
-	solver     func([]*Operand) (*Operand, error)
+	solver     func([]*Operand) *Operand
 	qualifiers TokenType
 }
 
@@ -90,7 +89,7 @@ func (o *Operator) Exclude() bool {
 	return o.solver == nil
 }
 
-func (o *Operator) Solve(args []*Operand) (*Operand, error) {
+func (o *Operator) Solve(args []*Operand) *Operand {
 	return o.solver(args)
 }
 
@@ -100,77 +99,63 @@ func (o *Operator) Type() TokenType {
 
 // ****** Operations **********************************************************
 
-func validateOne(operands []*Operand) error {
+func validateOne(operands []*Operand) {
 	if len(operands) != 1 {
-		return fmt.Errorf("%w: expected 1, received %d", ErrInvalidOperandCount, len(operands))
+		panic(fmt.Errorf("%w: invalid number of operands 1 != %d", ErrInvalidOperation, len(operands)))
 	}
-	return nil
 }
-func validateTwo(operands []*Operand) error {
+func validateTwo(operands []*Operand) {
 	if len(operands) != 2 {
-		return fmt.Errorf("%w: expected 2, received %d", ErrInvalidOperandCount, len(operands))
+		panic(fmt.Errorf("%w: invalid number of operands 2 != %d", ErrInvalidOperation, len(operands)))
 	} else if operands[0].IsFloat() != operands[1].IsFloat() {
-		return fmt.Errorf("%w: Cannot mix int with float", ErrOperandTypeMismatch)
+		panic(fmt.Errorf("%w: cannot mix int with float", ErrInvalidOperation))
 	}
-	return nil
 }
 
-func subtract(operands []*Operand) (*Operand, error) {
-	if err := validateTwo(operands); err != nil {
-		return nil, err
-	}
+func subtract(operands []*Operand) *Operand {
+	validateTwo(operands)
 	if operands[0].IsFloat() {
-		return &Operand{f64: operands[0].f64 - operands[1].f64}, nil
+		return &Operand{f64: operands[0].f64 - operands[1].f64}
 	}
-	return &Operand{i64: operands[0].i64 - operands[1].i64}, nil
+	return &Operand{i64: operands[0].i64 - operands[1].i64}
 }
 
-func add(operands []*Operand) (*Operand, error) {
-	if err := validateTwo(operands); err != nil {
-		return nil, err
-	}
+func add(operands []*Operand) *Operand {
+	validateTwo(operands)
 	if operands[0].IsFloat() {
-		return &Operand{f64: operands[0].f64 + operands[1].f64}, nil
+		return &Operand{f64: operands[0].f64 + operands[1].f64}
 	}
-	return &Operand{i64: operands[0].i64 + operands[1].i64}, nil
+	return &Operand{i64: operands[0].i64 + operands[1].i64}
 }
 
-func multiply(operands []*Operand) (*Operand, error) {
-	if err := validateTwo(operands); err != nil {
-		return nil, err
-	}
+func multiply(operands []*Operand) *Operand {
+	validateTwo(operands)
 	if operands[0].IsFloat() {
-		return &Operand{f64: operands[0].f64 * operands[1].f64}, nil
+		return &Operand{f64: operands[0].f64 * operands[1].f64}
 	}
-	return &Operand{i64: operands[0].i64 * operands[1].i64}, nil
+	return &Operand{i64: operands[0].i64 * operands[1].i64}
 }
 
-func divide(operands []*Operand) (*Operand, error) {
-	if err := validateTwo(operands); err != nil {
-		return nil, err
-	}
+func divide(operands []*Operand) *Operand {
+	validateTwo(operands)
 	if operands[0].IsFloat() {
-		return &Operand{f64: operands[0].f64 / operands[1].f64}, nil
+		return &Operand{f64: operands[0].f64 / operands[1].f64}
 	}
-	return &Operand{i64: operands[0].i64 / operands[1].i64}, nil
+	return &Operand{i64: operands[0].i64 / operands[1].i64}
 }
 
-func mod(operands []*Operand) (*Operand, error) {
-	if err := validateTwo(operands); err != nil {
-		return nil, err
-	}
+func mod(operands []*Operand) *Operand {
+	validateTwo(operands)
 	if operands[0].IsFloat() {
-		return nil, fmt.Errorf("%w: cannot perform modulus operation with floats", ErrInvalidOperand)
+		panic(fmt.Errorf("%w: cannot perform modulus operation with floats", ErrInvalidOperand))
 	}
-	return &Operand{i64: operands[0].i64 % operands[1].i64}, nil
+	return &Operand{i64: operands[0].i64 % operands[1].i64}
 }
 
-func negative(operands []*Operand) (*Operand, error) {
-	if err := validateOne(operands); err != nil {
-		return nil, err
-	}
+func negative(operands []*Operand) *Operand {
+	validateOne(operands)
 	if operands[0].IsFloat() {
-		return &Operand{f64: -operands[0].f64}, nil
+		return &Operand{f64: -operands[0].f64}
 	}
-	return &Operand{i64: -operands[0].i64}, nil
+	return &Operand{i64: -operands[0].i64}
 }

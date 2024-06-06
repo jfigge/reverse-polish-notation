@@ -12,9 +12,8 @@ import (
 )
 
 var (
-	ErrInsufficientOperands = fmt.Errorf("insufficient operands")
-	ErrInvalidExpression    = fmt.Errorf("invalid expression")
-	ErrInvalidSyntax        = fmt.Errorf("invalid syntax")
+	ErrInvalidExpression = fmt.Errorf("invalid expression")
+	ErrInvalidSyntax     = fmt.Errorf("invalid syntax")
 )
 
 var (
@@ -33,24 +32,14 @@ func (rpn Notation) String() string {
 	return result
 }
 
-func Parse(exp string) (Notation, error) {
-	n, _, e := parse(exp)
-	return n, e
+func Parse(exp string) Notation {
+	return parse(&exp, 0)
 }
-func parse(exp string) (Notation, string, error) {
-	notation := Notation{}
-	operatorStack := make([]*ops.Operator, 0)
-	lastOpType := ops.TokenEmpty
-	var token ops.Token
-	var i int
-	var err error
-forLoop:
-	for exp != "" {
-		i++
-		token, exp, err = nextToken(exp, lastOpType)
-		if err != nil {
-			return nil, "", err
-		}
+func parse(exp *string, parenthesisCount int) Notation {
+	notation, operatorStack := Notation{}, make([]*ops.Operator, 0)
+	baseParenthesisCount := parenthesisCount
+	for i, lastOpType := 0, ops.TokenEmpty; *exp != "" && baseParenthesisCount == parenthesisCount; i++ {
+		token := nextToken(exp, lastOpType)
 		lastOpType = token.Type()
 		switch op := any(token).(type) {
 		case *ops.Operator:
@@ -68,63 +57,53 @@ forLoop:
 			notation = append(notation, op)
 		case *ops.Parenthesis:
 			if op.IsStart() {
-				var subNotation Notation
-				subNotation, exp, err = parse(exp)
-				if err != nil {
-					return nil, "", err
-				}
-				notation = append(notation, subNotation...)
+				notation = append(notation, parse(exp, 1)...)
 			} else {
-				break forLoop
+				parenthesisCount -= 1
 			}
-		default:
-			return nil, "", fmt.Errorf("%w: Invalid token at %d", ErrInvalidExpression, i)
 		}
+	}
+	if parenthesisCount > 0 {
+		panic(fmt.Errorf("%w: Unclosed parenthesis", ErrInvalidExpression))
+	} else if parenthesisCount < 0 {
+		panic(fmt.Errorf("%w: Too many close parenthesis", ErrInvalidExpression))
 	}
 	for len(operatorStack) > 0 {
 		notation = append(notation, operatorStack[len(operatorStack)-1])
 		operatorStack = operatorStack[:len(operatorStack)-1]
 	}
-	return notation, exp, nil
+	return notation
 }
 
-func nextToken(exp string, lastToken ops.TokenType) (ops.Token, string, error) {
-	parts := tokenizer.FindStringSubmatch(exp)
+func nextToken(exp *string, lastToken ops.TokenType) ops.Token {
+	parts := tokenizer.FindStringSubmatch(*exp)
 	if len(parts) != 3 {
-		return nil, exp, fmt.Errorf("%w: no valid token found", ErrInvalidSyntax)
+		panic(fmt.Errorf("%w: no valid token found", ErrInvalidSyntax))
 	}
-	op, err := ops.ParseToken(parts[1], lastToken)
-	if err != nil {
-		return nil, exp, err
-	}
-	return op, parts[2], nil
+	*exp = parts[2]
+	return ops.ParseToken(parts[1], lastToken)
 }
 
-func (rpn Notation) Solve() (*ops.Operand, error) {
+func (rpn Notation) Solve() *ops.Operand {
 	operandStack := make([]*ops.Operand, 0)
 	for _, token := range rpn {
 		switch op := any(token).(type) {
 		case *ops.Operator:
 			length := uint8(len(operandStack))
 			if length >= op.Operands() {
-				answer, err := op.Solve(operandStack[length-op.Operands() : length])
-				if err != nil {
-					return nil, err
-				}
+				answer := op.Solve(operandStack[length-op.Operands() : length])
 				operandStack = operandStack[:length-op.Operands()]
 				operandStack = append(operandStack, answer)
 			} else {
-				return nil, fmt.Errorf("%w: expected %d, received: %d", ErrInsufficientOperands, length, op.Operands())
+				panic(fmt.Errorf("%w: insufficient operands %d != %d", ErrInvalidExpression, op.Operands(), length))
 			}
 		case *ops.Operand:
 			operandStack = append(operandStack, op)
-		default:
-			return nil, fmt.Errorf("%w: Unexpected value at %q", ErrInvalidExpression, token)
 		}
 
 	}
 	if len(operandStack) != 1 {
-		return nil, fmt.Errorf("%w: Not all operands consumed", ErrInvalidExpression)
+		panic(fmt.Errorf("%w: not all operands consumed", ErrInvalidExpression))
 	}
-	return operandStack[0], nil
+	return operandStack[0]
 }

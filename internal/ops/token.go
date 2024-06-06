@@ -13,21 +13,16 @@ const ( // values pinned
 	TokenParentheses
 )
 
-func ParseToken(token string, lastToken TokenType) (Token, error) {
+func ParseToken(token string, lastToken TokenType) Token {
 	if len(token) == 1 {
 		if operator, ok := OperatorFromToken(token[0], lastToken); ok {
-			return operator, nil
+			return operator
 		}
 		if parenthesis, ok := ParenthesisFromToken(token[0]); ok {
-			return parenthesis, nil
+			return parenthesis
 		}
 	}
-	operand, err := OperandFromToken(token)
-	if err != nil {
-		return nil, err
-	}
-
-	return operand, nil
+	return OperandFromToken(token)
 }
 
 type Token interface {

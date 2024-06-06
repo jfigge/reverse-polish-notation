@@ -40,14 +40,14 @@ func ParenthesisRegEx() string {
 	return parenthesisRegEx
 }
 
-func (p *Parenthesis) String() string {
-	return string(p.symbol)
-}
-
 func (p *Parenthesis) IsStart() bool {
 	return p.symbol == '('
 }
 
-func (o *Parenthesis) Type() TokenType {
-	return o.tokenType
+func (p *Parenthesis) String() string {
+	return string(p.symbol)
+}
+
+func (p *Parenthesis) Type() TokenType {
+	return p.tokenType
 }

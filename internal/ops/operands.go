@@ -39,7 +39,7 @@ func (o *Operand) Type() TokenType {
 	return o.tokenType
 }
 
-func OperandFromToken(token string) (*Operand, error) {
+func OperandFromToken(token string) *Operand {
 	var err error
 	op := &Operand{tokenType: TokenOperand}
 	if strings.Contains(token, ".") && !strings.HasSuffix(token, ".") {
@@ -48,7 +48,7 @@ func OperandFromToken(token string) (*Operand, error) {
 		op.i64, err = strconv.ParseInt(token, 10, 64)
 	}
 	if err != nil {
-		err = fmt.Errorf("%w: cannot parse %q", ErrInvalidOperand, token)
+		panic(fmt.Errorf("%w: cannot parse %q", ErrInvalidOperand, token))
 	}
-	return op, err
+	return op
 }
