@@ -33,7 +33,7 @@ func Test_rpn(t *testing.T) {
 		"parentheses": {
 			exp: "(4/2)",
 			rpn: "42/",
-			ans: int64(2),
+			ans: 2.0,
 		},
 		"parentheses-1": {
 			exp: "(1+2)*4-3",
@@ -65,6 +65,11 @@ func Test_rpn(t *testing.T) {
 			rpn: "23-*",
 			ans: int64(-6),
 		},
+		"space": {
+			exp: " 1 - 2 +  3   *  ( 4  / 5 ) + + 6 - - 7  ",
+			rpn: "12345/*6++7---",
+			ans: -16.4,
+		},
 		"unary-1": {
 			exp: "-2*-3",
 			rpn: "2-3-*",
@@ -95,9 +100,14 @@ func Test_rpn(t *testing.T) {
 			err: "invalid operand: cannot parse \"99999999999999999999\"",
 		},
 		"cannot mix int with float": {
+			exp: "2%1.4",
+			rpn: "21.4%",
+			err: "invalid operand: cannot perform modulus operation with floats",
+		},
+		"cannot mix float with int": {
 			exp: "1.4%2",
 			rpn: "1.42%",
-			err: "invalid operation: cannot mix int with float",
+			err: "invalid operand: cannot perform modulus operation with floats",
 		},
 		"cannot perform modulus operation with floats": {
 			exp: "1.4%2.3",
@@ -126,9 +136,20 @@ func Test_rpn(t *testing.T) {
 			rpn: "1*",
 			err: "invalid expression: insufficient operands 2 != 1",
 		},
+		"type-mismatch-plus": {
+			exp: "1.0+2",
+			rpn: "12+",
+			ans: 3.0,
+		},
+		"type-mismatch-minus": {
+			exp: "2-1.0",
+			rpn: "21-",
+			ans: 1.0,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(tt *testing.T) {
+
 			defer func() {
 				if e := recover(); e != nil {
 					txt := fmt.Sprintf("%v", e)

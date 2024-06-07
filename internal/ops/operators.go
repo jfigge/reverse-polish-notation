@@ -107,13 +107,19 @@ func validateOne(operands []*Operand) {
 func validateTwo(operands []*Operand) {
 	if len(operands) != 2 {
 		panic(fmt.Errorf("%w: invalid number of operands 2 != %d", ErrInvalidOperation, len(operands)))
-	} else if operands[0].IsFloat() != operands[1].IsFloat() {
-		panic(fmt.Errorf("%w: cannot mix int with float", ErrInvalidOperation))
+	}
+}
+func matchTypes(operands []*Operand) {
+	validateTwo(operands)
+	if operands[0].IsFloat() && !operands[1].IsFloat() {
+		operands[1].ToFloat()
+	} else if !operands[0].IsFloat() && operands[1].IsFloat() {
+		operands[0].ToFloat()
 	}
 }
 
 func subtract(operands []*Operand) *Operand {
-	validateTwo(operands)
+	matchTypes(operands)
 	if operands[0].IsFloat() {
 		return &Operand{f64: operands[0].f64 - operands[1].f64}
 	}
@@ -121,7 +127,7 @@ func subtract(operands []*Operand) *Operand {
 }
 
 func add(operands []*Operand) *Operand {
-	validateTwo(operands)
+	matchTypes(operands)
 	if operands[0].IsFloat() {
 		return &Operand{f64: operands[0].f64 + operands[1].f64}
 	}
@@ -129,7 +135,7 @@ func add(operands []*Operand) *Operand {
 }
 
 func multiply(operands []*Operand) *Operand {
-	validateTwo(operands)
+	matchTypes(operands)
 	if operands[0].IsFloat() {
 		return &Operand{f64: operands[0].f64 * operands[1].f64}
 	}
@@ -137,16 +143,16 @@ func multiply(operands []*Operand) *Operand {
 }
 
 func divide(operands []*Operand) *Operand {
-	validateTwo(operands)
+	matchTypes(operands)
 	if operands[0].IsFloat() {
 		return &Operand{f64: operands[0].f64 / operands[1].f64}
 	}
-	return &Operand{i64: operands[0].i64 / operands[1].i64}
+	return &Operand{f64: float64(operands[0].i64) / float64(operands[1].i64)}
 }
 
 func mod(operands []*Operand) *Operand {
 	validateTwo(operands)
-	if operands[0].IsFloat() {
+	if operands[0].IsFloat() || operands[1].IsFloat() {
 		panic(fmt.Errorf("%w: cannot perform modulus operation with floats", ErrInvalidOperand))
 	}
 	return &Operand{i64: operands[0].i64 % operands[1].i64}

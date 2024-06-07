@@ -7,6 +7,7 @@ package rpn
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"us.figge.rpn/internal/ops"
 )
@@ -35,10 +36,10 @@ func (rpn Notation) String() string {
 func Parse(exp string) Notation {
 	return parse(&exp, 0)
 }
-func parse(exp *string, parenthesisCount int) Notation {
+func parse(exp *string, subExpression int) Notation {
 	notation, operatorStack := Notation{}, make([]*ops.Operator, 0)
-	baseParenthesisCount := parenthesisCount
-	for i, lastOpType := 0, ops.TokenEmpty; *exp != "" && baseParenthesisCount == parenthesisCount; i++ {
+	subExpressionStart := subExpression
+	for i, lastOpType := 0, ops.TokenEmpty; strings.TrimSpace(*exp) != "" && subExpressionStart == subExpression; i++ {
 		token := nextToken(exp, lastOpType)
 		lastOpType = token.Type()
 		switch op := any(token).(type) {
@@ -59,13 +60,13 @@ func parse(exp *string, parenthesisCount int) Notation {
 			if op.IsStart() {
 				notation = append(notation, parse(exp, 1)...)
 			} else {
-				parenthesisCount -= 1
+				subExpression -= 1
 			}
 		}
 	}
-	if parenthesisCount > 0 {
+	if subExpression > 0 {
 		panic(fmt.Errorf("%w: Unclosed parenthesis", ErrInvalidExpression))
-	} else if parenthesisCount < 0 {
+	} else if subExpression < 0 {
 		panic(fmt.Errorf("%w: Too many close parenthesis", ErrInvalidExpression))
 	}
 	for len(operatorStack) > 0 {

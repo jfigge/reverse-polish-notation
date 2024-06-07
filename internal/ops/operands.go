@@ -39,6 +39,13 @@ func (o *Operand) Type() TokenType {
 	return o.tokenType
 }
 
+func (o *Operand) ToFloat() {
+	if o.i64 != 0 {
+		o.f64 = float64(o.i64)
+		o.i64 = 0
+	}
+}
+
 func OperandFromToken(token string) *Operand {
 	var err error
 	op := &Operand{tokenType: TokenOperand}
