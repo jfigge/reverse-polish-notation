@@ -34,36 +34,34 @@ func (rpn Notation) String() string {
 }
 
 func Parse(exp string) Notation {
-	notation, operatorStack := Notation{}, make([]*ops.Operator, 0)
+	notation, opStack := Notation{}, make([]*ops.Operator, 0)
 	for i, lastOpType := 0, ops.TokenEmpty; strings.TrimSpace(exp) != ""; i++ {
 		token := nextToken(&exp, lastOpType)
 		lastOpType = token.Type()
-		switch op := any(token).(type) {
-		case *ops.Operator:
-			switch {
-			case op.Exclude():
-				break
-			case op.String() == "(":
-				operatorStack = append(operatorStack, op)
+		if token.Type() == ops.TokenOperand {
+			notation = append(notation, token.(*ops.Operand))
+		} else if op := token.(*ops.Operator); !op.Exclude() {
+			if op.String() == "(" {
+				opStack = append(opStack, op)
 				lastOpType = ops.TokenEmpty
-			case op.String() == ")":
-				fmt.Println(notation)
-				notation = decantStack(notation, &operatorStack, func(i int) bool { return (operatorStack)[i].String() != "(" })
-				operatorStack = operatorStack[:len(operatorStack)-1]
-			default:
-				notation = decantStack(notation, &operatorStack, func(i int) bool { return operatorStack[i].Precedence() > op.Precedence() })
-				operatorStack = append(operatorStack, op)
+			} else if op.String() == ")" {
+				notation = decantStack(notation, &opStack, func(i int) bool {
+					return i >= 0 && (opStack)[i].String() != "("
+				})
+				opStack = opStack[:len(opStack)-1]
+			} else {
+				notation = decantStack(notation, &opStack, func(i int) bool {
+					return i >= 0 && opStack[i].Precedence() > op.Precedence()
+				})
+				opStack = append(opStack, op)
 			}
-		case *ops.Operand:
-			notation = append(notation, op)
 		}
 	}
-	return decantStack(notation, &operatorStack, func(i int) bool { return true })
+	return decantStack(notation, &opStack, func(i int) bool { return i >= 0 })
 }
 
 func decantStack(notation Notation, operatorStack *[]*ops.Operator, f func(i int) bool) Notation {
-	//for i := len(*operatorStack) - 1; i >= 0 && (*operatorStack)[i].String() != "("; i-- {
-	for i := len(*operatorStack) - 1; i >= 0 && f(i); i-- {
+	for i := len(*operatorStack) - 1; f(i); i-- {
 		notation = append(notation, (*operatorStack)[i])
 		*operatorStack = (*operatorStack)[:i]
 	}

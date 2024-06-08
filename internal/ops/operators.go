@@ -13,7 +13,7 @@ var (
 	ErrInvalidOperation = fmt.Errorf("invalid operation")
 )
 
-var ( // https://www.tutorialspoint.com/go/go_operators_precedence.htm
+var (
 	opMap     = map[byte][]*Operator{}
 	operators = [...]Operator{
 		{tokenType: TokenParentheses, precedence: 0, symbol: '('},
