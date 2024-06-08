@@ -18,9 +18,6 @@ func ParseToken(token string, lastToken TokenType) Token {
 		if operator, ok := OperatorFromToken(token[0], lastToken); ok {
 			return operator
 		}
-		if parenthesis, ok := ParenthesisFromToken(token[0]); ok {
-			return parenthesis
-		}
 	}
 	return OperandFromToken(token)
 }

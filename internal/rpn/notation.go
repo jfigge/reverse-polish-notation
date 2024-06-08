@@ -19,7 +19,7 @@ var (
 
 var (
 	tokenizer = regexp.MustCompile(
-		fmt.Sprintf(`^\s*(%s|%s|0|[1-9][0-9]*(?:\.[0-9]*)?)(.*)$`, ops.OperatorRegEx(), ops.ParenthesisRegEx()),
+		fmt.Sprintf(`^\s*(%s|0|[1-9][0-9]*(?:\.[0-9]*)?)(.*)$`, ops.OperatorRegEx()),
 	)
 )
 
@@ -34,44 +34,38 @@ func (rpn Notation) String() string {
 }
 
 func Parse(exp string) Notation {
-	return parse(&exp, 0)
-}
-func parse(exp *string, subExpression int) Notation {
 	notation, operatorStack := Notation{}, make([]*ops.Operator, 0)
-	subExpressionStart := subExpression
-	for i, lastOpType := 0, ops.TokenEmpty; strings.TrimSpace(*exp) != "" && subExpressionStart == subExpression; i++ {
-		token := nextToken(exp, lastOpType)
+	for i, lastOpType := 0, ops.TokenEmpty; strings.TrimSpace(exp) != ""; i++ {
+		token := nextToken(&exp, lastOpType)
 		lastOpType = token.Type()
 		switch op := any(token).(type) {
 		case *ops.Operator:
-			if op.Exclude() {
+			switch {
+			case op.Exclude():
 				break
+			case op.String() == "(":
+				operatorStack = append(operatorStack, op)
+				lastOpType = ops.TokenEmpty
+			case op.String() == ")":
+				fmt.Println(notation)
+				notation = decantStack(notation, &operatorStack, func(i int) bool { return (operatorStack)[i].String() != "(" })
+				operatorStack = operatorStack[:len(operatorStack)-1]
+			default:
+				notation = decantStack(notation, &operatorStack, func(i int) bool { return operatorStack[i].Precedence() > op.Precedence() })
+				operatorStack = append(operatorStack, op)
 			}
-			length := len(operatorStack) - 1
-			for length >= 0 && operatorStack[length].Precedence() > op.Precedence() {
-				notation = append(notation, operatorStack[length])
-				operatorStack = operatorStack[:length]
-				length--
-			}
-			operatorStack = append(operatorStack, op)
 		case *ops.Operand:
 			notation = append(notation, op)
-		case *ops.Parenthesis:
-			if op.IsStart() {
-				notation = append(notation, parse(exp, 1)...)
-			} else {
-				subExpression -= 1
-			}
 		}
 	}
-	if subExpression > 0 {
-		panic(fmt.Errorf("%w: Unclosed parenthesis", ErrInvalidExpression))
-	} else if subExpression < 0 {
-		panic(fmt.Errorf("%w: Too many close parenthesis", ErrInvalidExpression))
-	}
-	for len(operatorStack) > 0 {
-		notation = append(notation, operatorStack[len(operatorStack)-1])
-		operatorStack = operatorStack[:len(operatorStack)-1]
+	return decantStack(notation, &operatorStack, func(i int) bool { return true })
+}
+
+func decantStack(notation Notation, operatorStack *[]*ops.Operator, f func(i int) bool) Notation {
+	//for i := len(*operatorStack) - 1; i >= 0 && (*operatorStack)[i].String() != "("; i-- {
+	for i := len(*operatorStack) - 1; i >= 0 && f(i); i-- {
+		notation = append(notation, (*operatorStack)[i])
+		*operatorStack = (*operatorStack)[:i]
 	}
 	return notation
 }

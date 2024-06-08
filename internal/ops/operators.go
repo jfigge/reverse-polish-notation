@@ -16,6 +16,8 @@ var (
 var ( // https://www.tutorialspoint.com/go/go_operators_precedence.htm
 	opMap     = map[byte][]*Operator{}
 	operators = [...]Operator{
+		{tokenType: TokenParentheses, precedence: 0, symbol: '('},
+		{tokenType: TokenParentheses, precedence: 0, symbol: ')'},
 		{tokenType: TokenOperator, precedence: 11, symbol: '-', operands: 2, solver: subtract, qualifiers: TokenOperand | TokenParentheses},
 		{tokenType: TokenOperator, precedence: 12, symbol: '+', operands: 2, solver: add, qualifiers: TokenOperand | TokenParentheses},
 		{tokenType: TokenOperator, precedence: 21, symbol: '*', operands: 2, solver: multiply},
@@ -44,7 +46,7 @@ func init() {
 		if !exists {
 			ops = []*Operator{}
 			var escape string
-			if op.symbol == '+' || op.symbol == '*' {
+			if op.symbol == '+' || op.symbol == '*' || op.symbol == '(' || op.symbol == ')' {
 				escape = `\`
 			}
 			parts = append(parts, escape+string(op.symbol))
@@ -86,7 +88,7 @@ func (o *Operator) String() string {
 }
 
 func (o *Operator) Exclude() bool {
-	return o.solver == nil
+	return o.solver == nil && o.Operands() > 0
 }
 
 func (o *Operator) Solve(args []*Operand) *Operand {

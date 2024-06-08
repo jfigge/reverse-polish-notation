@@ -60,6 +60,11 @@ func Test_rpn(t *testing.T) {
 			rpn: "12+12--*",
 			ans: int64(9),
 		},
+		"parentheses-6": {
+			exp: "(4+3)-2",
+			rpn: "43+2-",
+			ans: int64(5),
+		},
 		"unary": {
 			exp: "2*-3",
 			rpn: "23-*",
@@ -172,20 +177,6 @@ func Test_Unreachable(t *testing.T) {
 		op, ok := ops.OperatorFromToken('-', ops.TokenType(16))
 		assert.Nil(tt, op)
 		assert.False(tt, ok)
-	})
-
-	t.Run("open parenthesis string", func(tt *testing.T) {
-		op, ok := ops.ParenthesisFromToken('(')
-		assert.NotNil(tt, op)
-		assert.True(tt, ok)
-		assert.Equal(tt, "(", op.String())
-	})
-
-	t.Run("close parenthesis string", func(tt *testing.T) {
-		op, ok := ops.ParenthesisFromToken(')')
-		assert.NotNil(tt, op)
-		assert.True(tt, ok)
-		assert.Equal(tt, ")", op.String())
 	})
 
 	t.Run("validate 1 != 2", func(tt *testing.T) {
