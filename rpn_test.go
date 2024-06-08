@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"us.figge.rpn/internal/ops"
 	"us.figge.rpn/internal/rpn"
 )
 
@@ -174,7 +173,7 @@ func Test_rpn(t *testing.T) {
 
 func Test_Unreachable(t *testing.T) {
 	t.Run("invalid operator qualifier", func(tt *testing.T) {
-		op, ok := ops.OperatorFromToken('-', ops.TokenType(16))
+		op, ok := rpn.OperatorFromToken('-', rpn.OpType(16))
 		assert.Nil(tt, op)
 		assert.False(tt, ok)
 	})
@@ -189,13 +188,13 @@ func Test_Unreachable(t *testing.T) {
 			}
 		}()
 
-		op, ok := ops.OperatorFromToken('-', ops.TokenEmpty)
+		op, ok := rpn.OperatorFromToken('-', rpn.TokenEmpty)
 		assert.NotNil(tt, op)
 		assert.True(tt, ok)
 
-		op1 := ops.OperandFromToken("123")
-		op2 := ops.OperandFromToken("456")
-		_ = op.Solve([]*ops.Operand{op1, op2})
+		op1 := rpn.OperandFromToken("123")
+		op2 := rpn.OperandFromToken("456")
+		_ = op.Solve([]*rpn.Operand{op1, op2})
 	})
 
 	t.Run("validate 2 != 1", func(tt *testing.T) {
@@ -208,12 +207,12 @@ func Test_Unreachable(t *testing.T) {
 			}
 		}()
 
-		op, ok := ops.OperatorFromToken('*', ops.TokenEmpty)
+		op, ok := rpn.OperatorFromToken('*', rpn.TokenEmpty)
 		assert.NotNil(tt, op)
 		assert.True(tt, ok)
 
-		op1 := ops.OperandFromToken("123")
-		_ = op.Solve([]*ops.Operand{op1})
+		op1 := rpn.OperandFromToken("123")
+		_ = op.Solve([]*rpn.Operand{op1})
 	})
 }
 

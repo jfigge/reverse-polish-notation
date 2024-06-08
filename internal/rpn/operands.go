@@ -2,7 +2,7 @@
  * Copyright (C) 2024 by Jason Figge
  */
 
-package ops
+package rpn
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ var (
 )
 
 type Operand struct {
-	tokenType TokenType
+	tokenType OpType
 	i64       int64
 	f64       float64
 }
@@ -35,7 +35,7 @@ func (o *Operand) Value() any {
 	return o.i64
 }
 
-func (o *Operand) Type() TokenType {
+func (o *Operand) Type() OpType {
 	return o.tokenType
 }
 

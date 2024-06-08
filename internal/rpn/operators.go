@@ -2,7 +2,7 @@
  * Copyright (C) 2024 by Jason Figge
  */
 
-package ops
+package rpn
 
 import (
 	"fmt"
@@ -30,33 +30,15 @@ var (
 )
 
 type Operator struct {
-	tokenType  TokenType
+	tokenType  OpType
 	precedence uint8
 	symbol     byte
 	operands   uint8
 	solver     func([]*Operand) *Operand
-	qualifiers TokenType
+	qualifiers OpType
 }
 
-func init() {
-	parts := make([]string, 0, len(operators))
-	for i := 0; i < len(operators); i++ {
-		op := operators[i]
-		ops, exists := opMap[op.symbol]
-		if !exists {
-			ops = []*Operator{}
-			var escape string
-			if op.symbol == '+' || op.symbol == '*' || op.symbol == '(' || op.symbol == ')' {
-				escape = `\`
-			}
-			parts = append(parts, escape+string(op.symbol))
-		}
-		opMap[op.symbol] = append(ops, &op)
-	}
-	opRegEx = strings.Join(parts, "|")
-}
-
-func OperatorFromToken(symbol byte, lastToken TokenType) (*Operator, bool) {
+func OperatorFromToken(symbol byte, lastToken OpType) (*Operator, bool) {
 	ops, ok := opMap[symbol]
 	if !ok {
 		return nil, false
@@ -72,6 +54,23 @@ func OperatorFromToken(symbol byte, lastToken TokenType) (*Operator, bool) {
 }
 
 func OperatorRegEx() string {
+	if opRegEx == "" {
+		parts := make([]string, 0, len(operators))
+		for i := 0; i < len(operators); i++ {
+			op := operators[i]
+			ops, exists := opMap[op.symbol]
+			if !exists {
+				ops = []*Operator{}
+				var escape string
+				if op.symbol == '+' || op.symbol == '*' || op.symbol == '(' || op.symbol == ')' {
+					escape = `\`
+				}
+				parts = append(parts, escape+string(op.symbol))
+			}
+			opMap[op.symbol] = append(ops, &op)
+		}
+		opRegEx = strings.Join(parts, "|")
+	}
 	return opRegEx
 }
 
@@ -79,7 +78,7 @@ func (o *Operator) Operands() uint8 {
 	return o.operands
 }
 
-func (o *Operator) Precedence() uint8 {
+func (o *Operator) Presedence() uint8 {
 	return o.precedence
 }
 
@@ -95,7 +94,7 @@ func (o *Operator) Solve(args []*Operand) *Operand {
 	return o.solver(args)
 }
 
-func (o *Operator) Type() TokenType {
+func (o *Operator) Type() OpType {
 	return o.tokenType
 }
 

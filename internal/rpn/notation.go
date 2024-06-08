@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"us.figge.rpn/internal/ops"
 )
 
 var (
@@ -19,11 +17,23 @@ var (
 
 var (
 	tokenizer = regexp.MustCompile(
-		fmt.Sprintf(`^\s*(%s|0|[1-9][0-9]*(?:\.[0-9]*)?)(.*)$`, ops.OperatorRegEx()),
+		fmt.Sprintf(`^\s*(%s|0|[1-9][0-9]*(?:\.[0-9]*)?)(.*)$`, OperatorRegEx()),
 	)
 )
 
-type Notation []ops.Token
+const ( // values pinned
+	TokenEmpty OpType = 1 << iota
+	TokenOperand
+	TokenOperator
+	TokenParentheses
+)
+
+type OpType uint8
+type Op interface {
+	Type() OpType
+	String() string
+}
+type Notation []Op
 
 func (rpn Notation) String() string {
 	result := ""
@@ -34,54 +44,60 @@ func (rpn Notation) String() string {
 }
 
 func Parse(exp string) Notation {
-	notation, opStack := Notation{}, make([]*ops.Operator, 0)
-	for i, lastOpType := 0, ops.TokenEmpty; strings.TrimSpace(exp) != ""; i++ {
+	notation, opStack := Notation{}, make([]*Operator, 0)
+	for i, lastOpType := 0, TokenEmpty; strings.TrimSpace(exp) != ""; i++ {
 		token := nextToken(&exp, lastOpType)
 		lastOpType = token.Type()
-		if token.Type() == ops.TokenOperand {
-			notation = append(notation, token.(*ops.Operand))
-		} else if op := token.(*ops.Operator); !op.Exclude() {
+		if token.Type() == TokenOperand {
+			notation = append(notation, token.(*Operand))
+		} else if op := token.(*Operator); !op.Exclude() {
 			if op.String() == "(" {
 				opStack = append(opStack, op)
-				lastOpType = ops.TokenEmpty
+				lastOpType = TokenEmpty
 			} else if op.String() == ")" {
-				notation = decantStack(notation, &opStack, func(i int) bool {
-					return i >= 0 && (opStack)[i].String() != "("
-				})
+				notation = decantStack(notation, &opStack, func(i int) bool { return true })
+				if len(opStack) == 0 {
+					panic(fmt.Errorf("%w: Too many close parenthesis", ErrInvalidExpression))
+				}
 				opStack = opStack[:len(opStack)-1]
 			} else {
-				notation = decantStack(notation, &opStack, func(i int) bool {
-					return i >= 0 && opStack[i].Precedence() > op.Precedence()
-				})
+				notation = decantStack(notation, &opStack, func(i int) bool { return opStack[i].Presedence() > op.Presedence() })
 				opStack = append(opStack, op)
 			}
 		}
 	}
-	return decantStack(notation, &opStack, func(i int) bool { return i >= 0 })
-}
-
-func decantStack(notation Notation, operatorStack *[]*ops.Operator, f func(i int) bool) Notation {
-	for i := len(*operatorStack) - 1; f(i); i-- {
-		notation = append(notation, (*operatorStack)[i])
-		*operatorStack = (*operatorStack)[:i]
+	notation = decantStack(notation, &opStack, func(i int) bool { return true })
+	if len(opStack) > 0 && opStack[len(opStack)-1].String() == "(" {
+		panic(fmt.Errorf("%w: Unclosed parenthesis", ErrInvalidExpression))
 	}
 	return notation
 }
 
-func nextToken(exp *string, lastToken ops.TokenType) ops.Token {
+func decantStack(notation Notation, opStack *[]*Operator, f func(i int) bool) Notation {
+	for i := len(*opStack) - 1; i >= 0 && f(i) && (*opStack)[i].String() != "("; i-- {
+		notation = append(notation, (*opStack)[i])
+		*opStack = (*opStack)[:i]
+	}
+	return notation
+}
+
+func nextToken(exp *string, lastToken OpType) Op {
 	parts := tokenizer.FindStringSubmatch(*exp)
-	if len(parts) != 3 {
+	if len(parts) != 3 || len(parts[1]) == 0 {
 		panic(fmt.Errorf("%w: no valid token found", ErrInvalidSyntax))
 	}
 	*exp = parts[2]
-	return ops.ParseToken(parts[1], lastToken)
+	if operator, ok := OperatorFromToken(parts[1][0], lastToken); ok {
+		return operator
+	}
+	return OperandFromToken(parts[1])
 }
 
-func (rpn Notation) Solve() *ops.Operand {
-	operandStack := make([]*ops.Operand, 0)
+func (rpn Notation) Solve() *Operand {
+	operandStack := make([]*Operand, 0)
 	for _, token := range rpn {
 		switch op := any(token).(type) {
-		case *ops.Operator:
+		case *Operator:
 			length := uint8(len(operandStack))
 			if length >= op.Operands() {
 				answer := op.Solve(operandStack[length-op.Operands() : length])
@@ -90,7 +106,7 @@ func (rpn Notation) Solve() *ops.Operand {
 			} else {
 				panic(fmt.Errorf("%w: insufficient operands %d != %d", ErrInvalidExpression, op.Operands(), length))
 			}
-		case *ops.Operand:
+		case *Operand:
 			operandStack = append(operandStack, op)
 		}
 
