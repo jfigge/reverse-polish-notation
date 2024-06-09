@@ -21,7 +21,7 @@ var (
 	)
 )
 
-const ( // values pinned
+const (
 	TokenEmpty OpType = 1 << iota
 	TokenOperand
 	TokenOperator
@@ -34,14 +34,6 @@ type Op interface {
 	String() string
 }
 type Notation []Op
-
-func (rpn Notation) String() string {
-	result := ""
-	for _, token := range rpn {
-		result = fmt.Sprintf("%s%s", result, token.String())
-	}
-	return result
-}
 
 func Parse(exp string) Notation {
 	notation, opStack := Notation{}, make([]*Operator, 0)
@@ -73,26 +65,6 @@ func Parse(exp string) Notation {
 	return notation
 }
 
-func decantStack(notation Notation, opStack *[]*Operator, f func(i int) bool) Notation {
-	for i := len(*opStack) - 1; i >= 0 && f(i) && (*opStack)[i].String() != "("; i-- {
-		notation = append(notation, (*opStack)[i])
-		*opStack = (*opStack)[:i]
-	}
-	return notation
-}
-
-func nextToken(exp *string, lastToken OpType) Op {
-	parts := tokenizer.FindStringSubmatch(*exp)
-	if len(parts) != 3 || len(parts[1]) == 0 {
-		panic(fmt.Errorf("%w: no valid token found", ErrInvalidSyntax))
-	}
-	*exp = parts[2]
-	if operator, ok := OperatorFromToken(parts[1][0], lastToken); ok {
-		return operator
-	}
-	return OperandFromToken(parts[1])
-}
-
 func (rpn Notation) Solve() *Operand {
 	operandStack := make([]*Operand, 0)
 	for _, token := range rpn {
@@ -115,4 +87,32 @@ func (rpn Notation) Solve() *Operand {
 		panic(fmt.Errorf("%w: not all operands consumed", ErrInvalidExpression))
 	}
 	return operandStack[0]
+}
+
+func decantStack(notation Notation, opStack *[]*Operator, f func(i int) bool) Notation {
+	for i := len(*opStack) - 1; i >= 0 && f(i) && (*opStack)[i].String() != "("; i-- {
+		notation = append(notation, (*opStack)[i])
+		*opStack = (*opStack)[:i]
+	}
+	return notation
+}
+
+func nextToken(exp *string, lastToken OpType) Op {
+	parts := tokenizer.FindStringSubmatch(*exp)
+	if len(parts) != 3 || len(parts[1]) == 0 {
+		panic(fmt.Errorf("%w: no valid token found", ErrInvalidSyntax))
+	}
+	*exp = parts[2]
+	if operator, ok := OperatorFromToken(parts[1][0], lastToken); ok {
+		return operator
+	}
+	return OperandFromToken(parts[1])
+}
+
+func (rpn Notation) String() string {
+	result := ""
+	for _, token := range rpn {
+		result = fmt.Sprintf("%s%s", result, token.String())
+	}
+	return result
 }
